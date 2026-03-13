@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
+import NavAuth from "@/components/NavAuth";
 import "./globals.css";
 
 const inter = Inter({
@@ -30,6 +31,7 @@ export default function RootLayout({
               <Link href="/search" className="text-sm text-zinc-400 hover:text-white transition-colors">
                 Search
               </Link>
+              <NavAuth />
             </div>
           </div>
         </nav>

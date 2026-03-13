@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import MediaLogger from "@/components/MediaLogger";
 
 export default async function BookDetailPage({
   params,
@@ -84,6 +85,9 @@ export default async function BookDetailPage({
           )}
         </div>
       </div>
+
+      {/* Log / Rate / Review */}
+      <MediaLogger mediaType="book" mediaId={id} />
 
       {/* Adaptations panel */}
       {adaptations && adaptations.length > 0 && (

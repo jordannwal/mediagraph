@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import MediaLogger from "@/components/MediaLogger";
 
 export default async function ScreenMediaDetailPage({
   params,
@@ -92,6 +93,9 @@ export default async function ScreenMediaDetailPage({
           )}
         </div>
       </div>
+
+      {/* Log / Rate / Review */}
+      <MediaLogger mediaType="screen" mediaId={id} />
 
       {/* Source Material panel */}
       {sourceBook && (
