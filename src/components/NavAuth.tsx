@@ -59,6 +59,12 @@ export default function NavAuth() {
   return (
     <div className="flex items-center gap-4">
       <Link
+        href="/friends"
+        className="text-sm text-zinc-400 hover:text-white transition-colors"
+      >
+        Friends
+      </Link>
+      <Link
         href={`/profile/${user.user_metadata?.username || user.id}`}
         className="text-sm text-zinc-400 hover:text-white transition-colors"
       >

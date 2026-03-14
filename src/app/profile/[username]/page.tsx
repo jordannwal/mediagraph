@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import FriendButton from "@/components/FriendButton";
 
 export default async function ProfilePage({
   params,
@@ -17,19 +18,35 @@ export default async function ProfilePage({
 
   if (!profile) notFound();
 
-  // Get user's recent logs with book/screen info
-  const { data: logs } = await supabase
-    .from("user_logs")
-    .select("*")
-    .eq("user_id", profile.id)
-    .order("updated_at", { ascending: false })
-    .limit(20);
+  // Get user's recent logs, shelves, and friend count in parallel
+  const [logsResult, shelvesResult, friendsResult] = await Promise.all([
+    supabase
+      .from("user_logs")
+      .select("*")
+      .eq("user_id", profile.id)
+      .order("updated_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("shelves")
+      .select("*, shelf_items(count)")
+      .eq("user_id", profile.id)
+      .order("is_default", { ascending: false }),
+    supabase
+      .from("friendships")
+      .select("id", { count: "exact" })
+      .eq("status", "accepted")
+      .or(`requester_id.eq.${profile.id},addressee_id.eq.${profile.id}`),
+  ]);
+
+  const logs = logsResult.data ?? [];
+  const shelves = shelvesResult.data ?? [];
+  const friendCount = friendsResult.count ?? 0;
 
   // Fetch titles for each log
-  const bookIds = (logs ?? [])
+  const bookIds = logs
     .filter((l) => l.media_type === "book")
     .map((l) => l.media_id);
-  const screenIds = (logs ?? [])
+  const screenIds = logs
     .filter((l) => l.media_type === "screen")
     .map((l) => l.media_id);
 
@@ -56,9 +73,9 @@ export default async function ProfilePage({
   );
 
   // Stats
-  const totalLogs = logs?.length ?? 0;
-  const completedLogs = logs?.filter((l) => l.status === "completed") ?? [];
-  const ratedLogs = logs?.filter((l) => l.rating) ?? [];
+  const totalLogs = logs.length;
+  const completedLogs = logs.filter((l) => l.status === "completed");
+  const ratedLogs = logs.filter((l) => l.rating);
   const avgRating =
     ratedLogs.length > 0
       ? (
@@ -84,16 +101,19 @@ export default async function ProfilePage({
   return (
     <div>
       {/* Profile header */}
-      <div className="flex items-center gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-800 text-2xl font-bold text-zinc-400">
-          {profile.display_name?.[0]?.toUpperCase() || profile.username[0].toUpperCase()}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-800 text-2xl font-bold text-zinc-400">
+            {profile.display_name?.[0]?.toUpperCase() || profile.username[0].toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">
+              {profile.display_name || profile.username}
+            </h1>
+            <p className="text-sm text-zinc-500">@{profile.username}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-white">
-            {profile.display_name || profile.username}
-          </h1>
-          <p className="text-sm text-zinc-500">@{profile.username}</p>
-        </div>
+        <FriendButton profileId={profile.id} />
       </div>
 
       {profile.bio && (
@@ -116,7 +136,38 @@ export default async function ProfilePage({
             <p className="text-xs text-zinc-500">Avg Rating</p>
           </div>
         )}
+        <div>
+          <p className="text-2xl font-bold text-white">{friendCount}</p>
+          <p className="text-xs text-zinc-500">Friends</p>
+        </div>
       </div>
+
+      {/* Shelves */}
+      {shelves.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-zinc-500">
+            Shelves
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {shelves.map((shelf) => {
+              const itemCount = Array.isArray(shelf.shelf_items)
+                ? shelf.shelf_items[0]?.count ?? 0
+                : 0;
+              return (
+                <div
+                  key={shelf.id}
+                  className="rounded-lg border border-zinc-800 p-4 transition-colors hover:border-zinc-700"
+                >
+                  <p className="text-sm font-medium text-white">{shelf.name}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {itemCount} {itemCount === 1 ? "item" : "items"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Recent activity */}
       <section className="mt-10">
@@ -124,12 +175,12 @@ export default async function ProfilePage({
           Recent Activity
         </h2>
 
-        {(!logs || logs.length === 0) && (
+        {logs.length === 0 && (
           <p className="text-sm text-zinc-600">No activity yet.</p>
         )}
 
         <div className="space-y-3">
-          {(logs ?? []).map((log) => {
+          {logs.map((log) => {
             const isBook = log.media_type === "book";
             const media = isBook
               ? booksMap.get(log.media_id)
