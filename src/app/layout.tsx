@@ -10,8 +10,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MediaGraph",
+  title: {
+    default: "MediaGraph",
+    template: "%s | MediaGraph",
+  },
   description: "Track books, films, and their adaptations in one place.",
+  metadataBase: new URL("https://mediagraph2.vercel.app"),
+  openGraph: {
+    type: "website",
+    siteName: "MediaGraph",
+    title: "MediaGraph",
+    description: "Track books, films, and their adaptations in one place.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MediaGraph",
+    description: "Track books, films, and their adaptations in one place.",
+  },
 };
 
 export default function RootLayout({

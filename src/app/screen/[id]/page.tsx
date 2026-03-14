@@ -2,6 +2,45 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MediaLogger from "@/components/MediaLogger";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const { data: media } = await supabase
+    .from("screen_media")
+    .select("title, type, director, synopsis, poster_url")
+    .eq("id", id)
+    .single();
+
+  if (!media) return { title: "Not Found" };
+
+  const typeLabel = media.type === "film" ? "Film" : "Series";
+  const title = media.director
+    ? `${media.title} (${typeLabel}) — Directed by ${media.director}`
+    : `${media.title} (${typeLabel})`;
+  const description = media.synopsis
+    ? media.synopsis.slice(0, 160)
+    : `${media.title} on MediaGraph`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(media.poster_url && { images: [media.poster_url] }),
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function ScreenMediaDetailPage({
   params,

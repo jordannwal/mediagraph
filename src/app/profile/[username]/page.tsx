@@ -2,6 +2,31 @@ import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import FriendButton from "@/components/FriendButton";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const { data: profile } = await supabase
+    .from("users")
+    .select("username, display_name, bio")
+    .eq("username", username)
+    .single();
+
+  if (!profile) return { title: "User Not Found" };
+
+  const name = profile.display_name || profile.username;
+  const description = profile.bio || `${name}'s profile on MediaGraph`;
+
+  return {
+    title: `${name} (@${profile.username})`,
+    description,
+    openGraph: { title: `${name} (@${profile.username})`, description },
+  };
+}
 
 export default async function ProfilePage({
   params,

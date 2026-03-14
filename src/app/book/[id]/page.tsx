@@ -2,6 +2,41 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MediaLogger from "@/components/MediaLogger";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const { data: book } = await supabase
+    .from("books")
+    .select("title, author, description, cover_image_url")
+    .eq("id", id)
+    .single();
+
+  if (!book) return { title: "Book Not Found" };
+
+  const description = book.description
+    ? book.description.slice(0, 160)
+    : `${book.title} by ${book.author} on MediaGraph`;
+
+  return {
+    title: `${book.title} by ${book.author}`,
+    description,
+    openGraph: {
+      title: `${book.title} by ${book.author}`,
+      description,
+      ...(book.cover_image_url && { images: [book.cover_image_url] }),
+    },
+    twitter: {
+      card: "summary",
+      title: `${book.title} by ${book.author}`,
+      description,
+    },
+  };
+}
 
 export default async function BookDetailPage({
   params,
